@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_refresh_token/services/api_service.dart';
+import 'package:idp_secure/services/api_service.dart';
 import 'secure_storage_service.dart';
 
 class RefreshTokenInterceptor extends Interceptor {
@@ -11,8 +11,7 @@ class RefreshTokenInterceptor extends Interceptor {
         _dio = dio;
 
   @override
-  Future<void> onRequest(
-      RequestOptions options, RequestInterceptorHandler handler) async {
+  Future<void> onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     String? accessToken = await SecureStorageManager.readData('accessToken');
     if (accessToken != null) {
       options.headers['Authorization'] = 'Bearer $accessToken';
@@ -21,11 +20,9 @@ class RefreshTokenInterceptor extends Interceptor {
   }
 
   @override
-  Future<void> onError(
-      DioException err, ErrorInterceptorHandler handler) async {
+  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401 || err.response?.statusCode == 403) {
-      String? refreshToken =
-          await SecureStorageManager.readData('refreshToken');
+      String? refreshToken = await SecureStorageManager.readData('refreshToken');
       if (refreshToken == null) {
         await SecureStorageManager.clearAllData();
         handler.next(err);
@@ -36,11 +33,9 @@ class RefreshTokenInterceptor extends Interceptor {
         final newAccessToken = await _api.refreshToken(refreshToken);
         RequestOptions retryOptions = err.requestOptions
           ..headers['Authorization'] = 'Bearer $newAccessToken';
-        _dio.fetch(retryOptions).then((response) => handler.resolve(response),
-            onError: (e) {
-          handler.next(DioException(
-              requestOptions: retryOptions,
-              error: 'Retry with new token failed'));
+        _dio.fetch(retryOptions).then((response) => handler.resolve(response), onError: (e) {
+          handler.next(
+              DioException(requestOptions: retryOptions, error: 'Retry with new token failed'));
         });
       } catch (e) {
         await SecureStorageManager.clearAllData();
